@@ -23,6 +23,7 @@ namespace Quilter.Widgets {
         public Gtk.Label file_label;
         public Gtk.Grid file_grid;
         public SideBar sb;
+        public EditView ev;
         public string file;
         public SideBarBox (MainWindow win, string file) {
             this.win = win;
@@ -83,14 +84,14 @@ namespace Quilter.Widgets {
                             }
                             this.destroy ();
                             dialog.close ();
-                            Widgets.EditView.buffer.text = "";
-                            Services.FileManager.file = null;
+                            if (ev != null)
+                                ev.buffer.set_text("");
                             break;
                         case Gtk.ResponseType.NO:
                             this.destroy ();
                             dialog.close ();
-                            Widgets.EditView.buffer.text = "";
-                            Services.FileManager.file = null;
+                            if (ev != null)
+                                ev.buffer.set_text("");
                             break;
                         case Gtk.ResponseType.CANCEL:
                         case Gtk.ResponseType.CLOSE:
@@ -101,7 +102,7 @@ namespace Quilter.Widgets {
                             assert_not_reached ();
                     }
                 });
-                if (Widgets.EditView.buffer.get_modified() == true) {
+                if (ev.buffer.get_modified() == true) {
                     dialog.run ();
                 }
             });

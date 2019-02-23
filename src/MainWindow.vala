@@ -114,10 +114,12 @@ namespace Quilter {
                 }
             });
 
-            Widgets.EditView.buffer.changed.connect (() => {
-                render_func ();
-                update_count ();
-            });
+            if (edit_view_content != null) {
+                edit_view_content.buffer.changed.connect (() => {
+                    render_func ();
+                    update_count ();
+                });
+            }
 
             key_press_event.connect ((e) => {
                 uint keycode = e.hardware_keycode;
@@ -129,7 +131,8 @@ namespace Quilter {
                 if ((e.state & Gdk.ModifierType.CONTROL_MASK) != 0) {
                     if (match_keycode (Gdk.Key.s, keycode)) {
                         try {
-                            Services.FileManager.save ();
+                            File file = File.new_for_path (settings.current_file);
+                            Services.FileManager.save (file);
                         } catch (Error e) {
                             warning ("Unexpected error during open: " + e.message);
                         }
@@ -162,12 +165,12 @@ namespace Quilter {
                 }
                 if ((e.state & Gdk.ModifierType.CONTROL_MASK) != 0) {
                     if (match_keycode (Gdk.Key.z, keycode)) {
-                        Widgets.EditView.buffer.undo ();
+                        edit_view_content.do_undo ();
                     }
                 }
                 if ((e.state & Gdk.ModifierType.CONTROL_MASK + Gdk.ModifierType.SHIFT_MASK) != 0) {
                     if (match_keycode (Gdk.Key.z, keycode)) {
-                        Widgets.EditView.buffer.redo ();
+                        edit_view_content.do_redo ();
                     }
                 }
                 if (match_keycode (Gdk.Key.F11, keycode)) {
@@ -285,7 +288,7 @@ namespace Quilter {
             view_mode.stack = stack;
             view_mode.valign = Gtk.Align.CENTER;
             view_mode.homogeneous = true;
-            
+
             ((Gtk.RadioButton)(view_mode.get_children().first().data)).set_active (true);
             ((Gtk.RadioButton)(view_mode.get_children().first().data)).toggled.connect(() => {
                 show_font_button (false);
@@ -333,9 +336,11 @@ namespace Quilter {
                 this.resize (w, h);
             }
 
-            if (settings.current_file == "")
-                Services.FileManager.setup_tmp_file ();
+            if (settings.current_file == "") {
+                var tmp_file = File.new_for_path (Services.FileManager.cache);
+                settings.current_file = tmp_file.get_path ();
                 toolbar.set_subtitle ("No Documents Open");
+            }
 
             // Register for redrawing of window for handling margins and other
             // redrawing
@@ -388,7 +393,8 @@ namespace Quilter {
             if (settings.current_file != "") {
                 debug ("Saving working file...");
                 try {
-                    Services.FileManager.save ();
+                    File file = File.new_for_path(file_path);
+                    Services.FileManager.save (file);
                 } catch (Error err) {
                     print ("Error writing file: " + err.message);
                 }
@@ -473,9 +479,9 @@ namespace Quilter {
         }
 
         private void render_func () {
-            if (Widgets.EditView.buffer.get_modified () == true) {
+            if (edit_view_content.buffer.get_modified () == true) {
                 preview_view_content.update_html_view ();
-                Widgets.EditView.buffer.set_modified (false);
+                edit_view_content.buffer.set_modified (false);
             }
         }
 

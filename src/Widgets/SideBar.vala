@@ -64,12 +64,13 @@ namespace Quilter.Widgets {
             column.row_selected.connect ((row) => {
                 if (((Widgets.SideBarBox)row) != null) {
                     try {
-                        string text;
-                        string file_path = ((Widgets.SideBarBox)row).file_label.label;
-                        settings.current_file = file_path;
-                        var file = File.new_for_path (file_path);
-                        GLib.FileUtils.get_contents (file.get_path (), out text);
-                        Widgets.EditView.buffer.text = text;
+                        if (ev != null) {
+                            string text;
+                            string file_path = ((Widgets.SideBarBox)row).file_label.label;
+                            settings.current_file = file_path;
+                            GLib.FileUtils.get_contents (file_path, out text);
+                            ev.set_text (text);
+                        }
                     } catch (Error e) {
                         warning ("Error: %s\n", e.message);
                     }
@@ -102,7 +103,7 @@ namespace Quilter.Widgets {
             }
             return s_files;
         }
-        
+
         public GLib.List<unowned SideBarBox> get_rows () {
             return (GLib.List<unowned SideBarBox>) column.get_children ();
         }

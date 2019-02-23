@@ -49,7 +49,7 @@ namespace Quilter.Widgets {
         private void build_ui () {
             set_title (null);
             var settings = AppSettings.get_default ();
-            string cache = Path.build_filename (Environment.get_user_data_dir (), "com.github.lainsce.quilter" + "/temp.md");
+            string cache = Path.build_filename (Environment.get_user_data_dir (), "com.github.lainsce.quilter", "temp.md");
             if (this.subtitle != cache) {
                 set_subtitle (settings.current_file);
             } else if (this.subtitle != cache) {
@@ -74,7 +74,7 @@ namespace Quilter.Widgets {
                             } catch (Error e) {
                                 warning ("Unexpected error during save: " + e.message);
                             }
-                            Widgets.EditView.buffer.set_modified (false);
+                            sourceview.buffer.set_modified (false);
                             if (this.subtitle != cache) {
                                 set_subtitle ("No Documents Open");
                             } else if (settings.current_file == null || settings.current_file == cache) {
@@ -84,9 +84,9 @@ namespace Quilter.Widgets {
                             break;
                         case Gtk.ResponseType.NO:
                             debug ("User doesn't care about the file, shoot it to space.");
-                            Services.FileManager.file = File.new_for_path (cache);
-                            settings.current_file = cache;
-                            Widgets.EditView.buffer.set_modified (false);
+                            File file = File.new_for_path (cache);
+                            settings.current_file = file.get_path ();
+                            sourceview.buffer.set_modified (false);
                             if (this.subtitle != cache) {
                                 set_subtitle ("No Documents Open");
                             } else if (settings.current_file == null || settings.current_file == cache) {
@@ -107,7 +107,7 @@ namespace Quilter.Widgets {
                 });
 
 
-                if (Widgets.EditView.buffer.get_modified() == true) {
+                if (sourceview.buffer.get_modified() == true) {
                     dialog.run ();
                 }
             });
@@ -130,7 +130,8 @@ namespace Quilter.Widgets {
 
             save_button.clicked.connect (() => {
                 try {
-                    Services.FileManager.save ();
+                    File file = File.new_for_path(settings.current_file);
+                    Services.FileManager.save (file);
                 } catch (Error e) {
                     warning ("Unexpected error during open: " + e.message);
                 }

@@ -22,6 +22,7 @@ using WebKit;
 namespace Quilter {
     public class Widgets.Preview : WebKit.WebView {
         private static Preview? instance = null;
+        public EditView ev;
         public string html;
 
         public Preview () {
@@ -208,7 +209,9 @@ namespace Quilter {
         }
 
         private string process () {
-            string text = Widgets.EditView.buffer.text;
+            Gtk.TextIter start, end;
+            ev.get_instance().buffer.get_bounds (out start, out end);
+            string text = ev.get_instance().buffer.get_text (start, end, true);
             string processed_mk;
             process_frontmatter (text, out processed_mk);
             var mkd = new Markdown.Document.gfm_format (processed_mk.data, 

@@ -16,22 +16,20 @@
  */
 
 namespace Quilter.Services.FileManager {
-    public File tmp_file;
-    public File file;
     public MainWindow win;
     public Widgets.EditView view;
     private string[] files;
-    private string cache;
+    public string cache;
 
     public void save_file (string path) throws Error {
         try {
-            GLib.FileUtils.set_contents (path, Widgets.EditView.buffer.text);
+            GLib.FileUtils.set_contents (path, view.get_text ());
         } catch (Error err) {
             print ("Error writing file: " + err.message);
         }
     }
 
-    public File setup_tmp_file () {
+    public File setup_tmp_file (out File tmp_file) {
         debug ("Setupping cache...");
         cache = Path.build_filename (Environment.get_user_data_dir (), "com.github.lainsce.quilter", "temp.md");
         tmp_file = File.new_for_path (cache);
@@ -39,7 +37,8 @@ namespace Quilter.Services.FileManager {
     }
 
     private void save_tmp_file () {
-        setup_tmp_file ();
+        File tmp_file;
+        setup_tmp_file (out tmp_file);
         string file_path = tmp_file.get_path ();
         debug ("Saving cache...");
         try {
@@ -53,21 +52,22 @@ namespace Quilter.Services.FileManager {
     public bool open_from_outside (MainWindow win, File[] ofiles, string hint) {
         var settings = AppSettings.get_default ();
         foreach (File f in ofiles) {
-            string text;
-            string file_path = f.get_path ();
-            settings.current_file = file_path;
-            files += file_path;
-            settings.last_files = files;
-            if (win.sidebar != null) {
-                win.sidebar.add_file (file_path);
-            }
-            try {
-                GLib.FileUtils.get_contents (file_path, out text);
-                Widgets.EditView.buffer.text = text;
-                Widgets.EditView.buffer.set_modified (false);
-                file = null;
-            } catch (Error e) {
-                warning ("Error: %s", e.message);
+            if (view != null) {
+                string text;
+                string file_path = f.get_path ();
+                settings.current_file = file_path;
+                files += file_path;
+                settings.last_files = files;
+                if (win.sidebar != null) {
+                    win.sidebar.add_file (file_path);
+                }
+                try {
+                    GLib.FileUtils.get_contents (file_path, out text);
+                    Widgets.EditView.get_instance ().buffer.set_text (text);
+                    view.buffer.set_modified (false);
+                } catch (Error e) {
+                    warning ("Error: %s", e.message);
+                }
             }
         }
         return true;
@@ -97,20 +97,20 @@ namespace Quilter.Services.FileManager {
             if (file == null) {
                 debug ("User cancelled operation. Aborting.");
             } else {
-                GLib.FileUtils.get_contents (file.get_path (), out text);
-                Widgets.EditView.buffer.text = text;
-                Widgets.EditView.buffer.set_modified (false);
-                file = null;
+                if (view != null) {
+                    GLib.FileUtils.get_contents (file.get_path (), out text);
+                    Widgets.EditView.get_instance ().buffer.set_text (text);
+                    view.buffer.set_modified (false);
+                }
             }
         } catch (Error e) {
             warning ("Unexpected error during open: " + e.message);
         }
     }
 
-    public void save () throws Error {
+    public void save (File file) throws Error {
         debug ("Save button pressed.");
-        var settings = AppSettings.get_default ();
-        string file_path = settings.current_file;
+        string file_path = file.get_path ();
 
         try {
             debug ("Saving file...");
@@ -118,8 +118,7 @@ namespace Quilter.Services.FileManager {
                 debug ("User cancelled operation. Aborting.");
             } else {
                 save_file (file_path);
-                file = null;
-                Widgets.EditView.buffer.set_modified (false);
+                view.buffer.set_modified (false);
             }
         } catch (Error e) {
             warning ("Unexpected error during save: " + e.message);
@@ -140,8 +139,7 @@ namespace Quilter.Services.FileManager {
                 debug ("User cancelled operation. Aborting.");
             } else {
                 save_file (file_path);
-                file = null;
-                Widgets.EditView.buffer.set_modified (false);
+                view.buffer.set_modified (false);
             }
         } catch (Error e) {
             warning ("Unexpected error during save: " + e.message);

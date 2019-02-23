@@ -24,6 +24,7 @@ namespace Quilter {
         public Gtk.Label linecount_label;
         public Gtk.Label readtimecount_label;
         public MainWindow window;
+        public EditView view;
         public Gtk.ActionBar actionbar;
         public Gtk.MenuButton track_type_menu;
 
@@ -153,17 +154,20 @@ namespace Quilter {
 
         public WordCount get_count() {
     		try {
-    			var reg = new Regex("[\\s\\W]+", RegexCompileFlags.OPTIMIZE);
-                var buffer = Widgets.EditView.buffer;
+    			if (view != null) {
+    			    var reg = new Regex("[\\s\\W]+", RegexCompileFlags.OPTIMIZE);
+    			    Gtk.TextIter start, end;
+    			    view.buffer.get_bounds (out start, out end);
+                    string text = view.buffer.get_text (start, end, true);
+    			    string result = reg.replace (text, text.length, 0, " ");
 
-    			string text = buffer.text;
-    			string result = reg.replace (text, text.length, 0, " ");
+                    var lines = view.buffer.get_line_count ();
 
-                var lines = buffer.get_line_count ();
+                    var chars = result.length;
 
-                var chars = result.length;
-
-    			return new WordCount(result.strip().split(" ").length, lines,  chars);
+    			    return new WordCount(result.strip().split(" ").length, lines,  chars);
+    		    }
+    		    return new WordCount(0, 0, 0);
     		} catch (Error e) {
     			return new WordCount(0, 0, 0);
     		}

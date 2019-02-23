@@ -19,7 +19,6 @@
 namespace Quilter.Widgets {
     public class EditView : Gtk.SourceView {
         private static EditView? instance = null;
-        public static new Gtk.SourceBuffer buffer;
         public bool should_scroll {get; set; default = false;}
         public File file;
         public GtkSpell.Checker spell = null;
@@ -91,7 +90,9 @@ namespace Quilter.Widgets {
                     GLib.FileUtils.get_contents (filename, out text);
                     buffer.text = text;
                 } else {
-                    string filename = Services.FileManager.setup_tmp_file ().get_path ();
+                    var cache = Path.build_filename (Environment.get_user_data_dir (), "com.github.lainsce.quilter", "temp.md");
+                    File tmp_file = File.new_for_path (cache);
+                    string filename = tmp_file.get_path ();
                     GLib.FileUtils.get_contents (filename, out text);
                     buffer.text = text;
                 }
@@ -117,11 +118,11 @@ namespace Quilter.Widgets {
             var settings = AppSettings.get_default ();
             var manager = Gtk.SourceLanguageManager.get_default ();
             var language = manager.guess_language (null, "text/markdown");
-            buffer = new Gtk.SourceBuffer.with_language (language);
+            var buffer = new Gtk.SourceBuffer.with_language (language);
             buffer.highlight_syntax = true;
             buffer.set_max_undo_levels (20);
 
-            this.set_buffer (buffer);
+            this.set_buffer (buffer as Gtk.SourceBuffer);
             this.set_wrap_mode (Gtk.WrapMode.WORD);
             this.top_margin = 40;
             this.bottom_margin = 40;
@@ -171,7 +172,8 @@ namespace Quilter.Widgets {
             if (settings.autosave == true) {
                 Timeout.add (10000, () => {
                     try {
-                        Services.FileManager.save ();
+                        File file = File.new_for_path (settings.current_file);
+                        Services.FileManager.save (file);
                         buffer.set_modified (false);
                     } catch (Error err) {
                         print ("Error writing file: " + err.message);
@@ -179,6 +181,21 @@ namespace Quilter.Widgets {
                     return true;
                 });
             }
+        }
+
+        public string get_text () {
+            return buffer.text;
+        }
+        public void set_text (string text) {
+            buffer.text = text;
+        }
+        public void do_undo () {
+            var sbuffer = (Gtk.SourceBuffer) buffer;
+            sbuffer.undo ();
+        }
+        public void do_redo () {
+            var sbuffer = (Gtk.SourceBuffer) buffer;
+            sbuffer.redo ();
         }
 
         private Gtk.MenuItem? get_selected (Gtk.Menu? menu) {
@@ -199,7 +216,6 @@ namespace Quilter.Widgets {
             var buffer_context = this.get_style_context ();
             this.set_pixels_above_lines(settings.spacing);
             this.set_pixels_inside_wrap(settings.spacing);
-            Application.win.dynamic_margins();
             this.set_show_line_numbers (settings.show_num_lines);
 
             if (!settings.focus_mode) {
@@ -238,13 +254,11 @@ namespace Quilter.Widgets {
                 buffer_context.add_class ("big-text");
             }
 
-            set_scheme (get_default_scheme ());
-        }
-
-        public void set_scheme (string id) {
+            string id = get_default_scheme ();
             var style_manager = Gtk.SourceStyleSchemeManager.get_default ();
             var style = style_manager.get_scheme (id);
-            buffer.set_style_scheme (style);
+            var source_buffer = (Gtk.SourceBuffer) buffer;
+            source_buffer.set_style_scheme (style);
         }
 
         private string get_default_scheme () {
